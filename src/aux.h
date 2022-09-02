@@ -28,3 +28,4 @@ const std::vector<InstructionsTable> ti = {{"ADD", "1", 2},
                                            {"OUTPUT", "13", 2},
                                            {"STOP", "14", 1}};
 
+void readfile(std::fstream &, std::vector<int> &);
