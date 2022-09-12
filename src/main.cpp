@@ -19,4 +19,5 @@ std::vector<std::string> readfile(std::fstream &file)
         // std::cout << line << std::endl;
         vec.push_back(line);
     }
+    return vec;
 }
