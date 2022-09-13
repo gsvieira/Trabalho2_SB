@@ -4,8 +4,9 @@ int main(int argc, char *argv[])
 {
     std::fstream file(argv[1]);
     std::vector<std::string> code = readfile(file);
-    Transpiler tradutor(code);
+    Transpiler tradutor(code, argv[1]);
     tradutor.getlabels();
+    tradutor.printTables();
 }
 
 std::vector<std::string> readfile(std::fstream &file)
