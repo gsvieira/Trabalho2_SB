@@ -34,15 +34,18 @@ private:
                                                                 {"16", {"S_OUTPUT", 3}}};
     std::map<int, std::string> labelTable, jmpTable;
     std::vector<int> is_label;
-    std::vector<std::string> code;
+    std::vector<std::string> m_code;
+    std::string m_filename;
 
     void insert2labelTable(std::string);
     void insert2jmpTable(std::string);
+    void printTable(std::map<int, std::string>, std::string);
 
 public:
+    Transpiler(std::vector<std::string>, std::string);
     Transpiler &getlabels();
-
-    Transpiler(std::vector<std::string> code);
+    Transpiler &translate();
+    void printTables();
 };
 
 std::vector<std::string> readfile(std::fstream &);
