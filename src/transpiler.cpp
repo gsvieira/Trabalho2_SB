@@ -199,14 +199,14 @@ Transpiler &Transpiler::translate()
 
         // INPUT
         case 12: // TODO: pass arguments
-            outfile << "call input" << std::endl;
+            outfile << "call input_function" << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
 
         // OUTPUT
         case 13: // TODO: pass arguments
-            outfile << "call output" << std::endl;
+            outfile << "call output_function" << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
@@ -222,14 +222,14 @@ Transpiler &Transpiler::translate()
 
         // S_INPUT
         case 15: // TODO: pass arguments
-            outfile << "call output" << std::endl;
+            outfile << "call s_input_function" << std::endl;
             outfile << std::endl;
             addr += 3;
             break;
 
         // S_OUTPUT
         case 16: // TODO: pass arguments
-            outfile << "call output" << std::endl;
+            outfile << "call s_output_function" << std::endl;
             outfile << std::endl;
             addr += 3;
             break;
@@ -240,5 +240,26 @@ Transpiler &Transpiler::translate()
             break;
         }
     }
+
+    outfile << "input_function:" << std::endl;
+    outfile << "enter 0,0" << std::endl;
+    outfile << "mov eax, 3" <<std::endl;
+    outfile << "mov ebx, 1" <<std::endl;
+    outfile << "mov ecx, " <<std::endl;
+    outfile << "mov edx, " <<std::endl;
+    outfile << "int 80h" <<std::endl;
+    outfile << "leave" <<std::endl;
+    outfile << "ret" <<std::endl;
+    outfile << std::endl;
+
+    
+
+
+
+
+
+
+
+
     return *this;
 }
