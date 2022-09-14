@@ -52,19 +52,17 @@ Transpiler &Transpiler::getlabels()
 
 void Transpiler::insert2jmpTable(std::string token)
 {
-    int label_num = jmpTable.size() + labelTable.size();
-    std::string label = "label" + std::to_string(label_num);
     if (!jmpTable.contains(stoi(token)))
     {
+        std::string label = "label" + std::to_string(label_num++);
         jmpTable.insert(std::pair<int, std::string>(stoi(token), label));
     }
 }
 void Transpiler::insert2labelTable(std::string token)
 {
-    int label_num = jmpTable.size() + labelTable.size();
-    std::string label = "label" + std::to_string(label_num);
     if (!labelTable.contains(stoi(token)))
     {
+        std::string label = "label" + std::to_string(label_num++);
         labelTable.insert(std::pair<int, std::string>(stoi(token), label));
     }
 }
@@ -86,10 +84,22 @@ void Transpiler::printTables()
 
 Transpiler &Transpiler::translate()
 {
-    std::string outfilename = m_filename.replace(m_filename.find('.'),2,".s");
-    std::ofstream outfile(outfilename); // open file 
+    std::string outfilename = m_filename.replace(m_filename.find('.'), 2, ".s");
+    std::ofstream outfile(outfilename); // open file
 
-    
+    // Prepare section data
+
+    outfile << "section .data" << std::endl;
+    outfile << "acc dd 0" << std::endl;
+    for (auto &&tableline : labelTable)
+    {
+        outfile << tableline.second << " dd " << m_code[tableline.first] << std::endl;
+    }
+    outfile << std::endl;
+    outfile << "section .text" << std::endl;
+    outfile << std::endl;
+    outfile << "global _start" << std::endl;
+    outfile << "_start:" << std::endl;
 
     int addr = 0;
     while (addr >= 0)
@@ -99,82 +109,129 @@ Transpiler &Transpiler::translate()
         {
         // ADD
         case 1:
-            /* code */
+            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "add [acc], eax" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // SUB
         case 2:
-            /* code */
+            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "sub [acc], eax" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // MUL
-        case 3:
-            /* code */
+        case 3: // TODO:treatment of overflow
+            outfile << "mov eax, [acc]" << std::endl;
+            outfile << "imul dword [" << labelTable.find(addr + 1)->second << "]" << std::endl; // multiply eax with memory location
+            outfile << "mov [acc], eax" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // DIV
         case 4:
-            /* code */
+            outfile << "mov eax, [acc]" << std::endl;
+            outfile << "cdq" << std::endl;
+            outfile << "idiv dword [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "mov [acc], eax" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // JMP
         case 5:
-            /* code */
+            outfile << "jmp " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // JMPN
         case 6:
-            /* code */
+            outfile << "cmp dword [acc], 0" << std::endl;
+            outfile << "jl " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // JMPP
         case 7:
-            /* code */
+            outfile << "cmp dword [acc], 0" << std::endl;
+            outfile << "jg " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // JMPZ
         case 8:
-            /* code */
+            outfile << "cmp dword [acc], 0" << std::endl;
+            outfile << "je " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // COPY
         case 9:
-            /* code */
+            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "mov [" << labelTable.find(addr + 2)->second << "], eax" << std::endl;
+            outfile << std::endl;
+            addr += 3;
             break;
 
         // LOAD
         case 10:
-            /* code */
+            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "mov [acc], eax" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // STORE
         case 11:
-            /* code */
+            outfile << "mov eax, [acc]" << std::endl;
+            outfile << "mov [" << labelTable.find(addr + 1)->second << "], eax" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // INPUT
-        case 12:
-            /* code */
+        case 12: // TODO: pass arguments
+            outfile << "call input" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // OUTPUT
-        case 13:
-            /* code */
+        case 13: // TODO: pass arguments
+            outfile << "call output" << std::endl;
+            outfile << std::endl;
+            addr += 2;
             break;
 
         // STOP
         case 14:
-            /* code */
+            outfile << "mov eax, 1" << std::endl;
+            outfile << "mov ebx, 0" << std::endl;
+            outfile << "int 80h" << std::endl;
+            outfile << std::endl;
+            addr = -1;
             break;
 
         // S_INPUT
-        case 15:
-            /* code */
+        case 15: // TODO: pass arguments
+            outfile << "call output" << std::endl;
+            outfile << std::endl;
+            addr += 3;
             break;
 
         // S_OUTPUT
-        case 16:
-            /* code */
+        case 16: // TODO: pass arguments
+            outfile << "call output" << std::endl;
+            outfile << std::endl;
+            addr += 3;
             break;
 
         default:
@@ -183,4 +240,5 @@ Transpiler &Transpiler::translate()
             break;
         }
     }
+    return *this;
 }
