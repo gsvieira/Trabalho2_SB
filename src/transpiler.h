@@ -36,6 +36,7 @@ private:
     std::vector<int> is_label;
     std::vector<std::string> m_code;
     std::string m_filename;
+    int static label_num;
 
     void insert2labelTable(std::string);
     void insert2jmpTable(std::string);

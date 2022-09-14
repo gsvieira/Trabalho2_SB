@@ -1,5 +1,6 @@
 #include "transpiler.h"
 
+int Transpiler::label_num{0};
 int main(int argc, char *argv[])
 {
     std::fstream file(argv[1]);
