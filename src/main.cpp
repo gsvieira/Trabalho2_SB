@@ -8,6 +8,7 @@ int main(int argc, char *argv[])
     Transpiler tradutor(code, argv[1]);
     tradutor.getlabels();
     tradutor.printTables();
+    tradutor.translate();
 }
 
 std::vector<std::string> readfile(std::fstream &file)

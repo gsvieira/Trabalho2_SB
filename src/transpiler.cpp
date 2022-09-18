@@ -1,6 +1,6 @@
 #include "transpiler.h"
 
-#define GET_VARIABLE_NAME(Variable) (#Variable)
+
 
 Transpiler::Transpiler(std::vector<std::string> code, std::string filename) : m_code{code}, m_filename{filename}
 {
@@ -199,6 +199,7 @@ Transpiler &Transpiler::translate()
 
         // INPUT
         case 12: // TODO: pass arguments
+            outfile << "" ;
             outfile << "call input_function" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -221,15 +222,21 @@ Transpiler &Transpiler::translate()
             break;
 
         // S_INPUT
-        case 15: // TODO: pass arguments
+        case 15:
+            outfile << "push dword [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "push dword " << labelTable.find(addr + 2)->second << std::endl;
             outfile << "call s_input_function" << std::endl;
+            outfile << "add esp, 8" << std::endl;
             outfile << std::endl;
             addr += 3;
             break;
 
         // S_OUTPUT
-        case 16: // TODO: pass arguments
+        case 16:
+            outfile << "push dword [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "push dword " << labelTable.find(addr + 2)->second << std::endl;
             outfile << "call s_output_function" << std::endl;
+            outfile << "add esp, 8" << std::endl;
             outfile << std::endl;
             addr += 3;
             break;
@@ -244,16 +251,37 @@ Transpiler &Transpiler::translate()
     outfile << "input_function:" << std::endl;
     outfile << "enter 0,0" << std::endl;
     outfile << "mov eax, 3" <<std::endl;
-    outfile << "mov ebx, 1" <<std::endl;
-    outfile << "mov ecx, " <<std::endl;
-    outfile << "mov edx, " <<std::endl;
+    outfile << "mov ebx, 0" <<std::endl;
+    outfile << "mov ecx," <<std::endl;
+    outfile << "mov edx," <<std::endl;
     outfile << "int 80h" <<std::endl;
     outfile << "leave" <<std::endl;
     outfile << "ret" <<std::endl;
     outfile << std::endl;
 
-    
+    outfile << "s_input_function:" << std::endl;
+    outfile << "enter 0,0" << std::endl;
+    outfile << "mov eax, 3" << std::endl;
+    outfile << "mov ebx, 0" << std::endl;
+    outfile << "mov ecx, [ebp+12]" << std::endl;
+    outfile << "mov edx, [ebp+8]" << std::endl;
+    outfile << "int 80h" << std::endl;
+    outfile << "leave" <<std::endl;
+    outfile << "ret" <<std::endl;
+    outfile << std::endl;
 
+    outfile << "s_output_function:" << std::endl;
+    outfile << "enter 0,0" << std::endl;
+    outfile << "mov eax, 4" << std::endl;
+    outfile << "mov ebx, 1" << std::endl;
+    outfile << "mov ecx, [ebp+12]" << std::endl;
+    outfile << "mov edx, [ebp+8]" << std::endl;
+    outfile << "int 80h" << std::endl;
+    outfile << "leave" <<std::endl;
+    outfile << "ret" <<std::endl;
+    outfile << std::endl;
+
+    
 
 
 
