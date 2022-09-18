@@ -1,11 +1,7 @@
 #include "transpiler.h"
 
-
-
 Transpiler::Transpiler(std::vector<std::string> code, std::string filename) : m_code{code}, m_filename{filename}
 {
-    is_label.reserve(code.size());
-    std::fill(is_label.begin(), is_label.end(), -1); // TODO: test if its working
 }
 
 Transpiler &Transpiler::getlabels()
@@ -84,7 +80,9 @@ void Transpiler::printTables()
 
 Transpiler &Transpiler::translate()
 {
-    std::string outfilename = m_filename.replace(m_filename.find('.'), 2, ".s");
+    std::string outfilename = m_filename;
+    outfilename.erase(outfilename.find_last_of('.'));
+    outfilename.append(".s");
     std::ofstream outfile(outfilename); // open file
 
     // Prepare section data
@@ -96,6 +94,8 @@ Transpiler &Transpiler::translate()
         outfile << tableline.second << " dd " << m_code[tableline.first] << std::endl;
     }
     outfile << std::endl;
+    outfile << "overflow_text db 'Overflow',0dH,0ah" << std::endl;
+    outfile << "ov_size dd 10" << std::endl;
     outfile << "section .text" << std::endl;
     outfile << std::endl;
     outfile << "global _start" << std::endl;
@@ -105,11 +105,17 @@ Transpiler &Transpiler::translate()
     while (addr >= 0)
     {
         // TODO: append jump label if addr is found on jmptable
+        std::map<int, std::string>::iterator token;
+        if (m_code[addr] != "14")
+        {
+            token = labelTable.find(stoi(m_code[addr + 1]));
+        }
+
         switch (stoi(m_code[addr]))
         {
         // ADD
         case 1:
-            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "mov eax, [" << token->second << "]" << std::endl;
             outfile << "add [acc], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -117,7 +123,7 @@ Transpiler &Transpiler::translate()
 
         // SUB
         case 2:
-            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "mov eax, [" << token->second << "]" << std::endl;
             outfile << "sub [acc], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -126,7 +132,8 @@ Transpiler &Transpiler::translate()
         // MUL
         case 3: // TODO:treatment of overflow
             outfile << "mov eax, [acc]" << std::endl;
-            outfile << "imul dword [" << labelTable.find(addr + 1)->second << "]" << std::endl; // multiply eax with memory location
+            outfile << "imul dword [" << token->second << "]" << std::endl; // multiply eax with memory location
+            outfile << "jo overflow_call" << std::endl;
             outfile << "mov [acc], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -136,7 +143,7 @@ Transpiler &Transpiler::translate()
         case 4:
             outfile << "mov eax, [acc]" << std::endl;
             outfile << "cdq" << std::endl;
-            outfile << "idiv dword [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << "idiv dword [" << token->second << "]" << std::endl;
             outfile << "mov [acc], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -144,7 +151,7 @@ Transpiler &Transpiler::translate()
 
         // JMP
         case 5:
-            outfile << "jmp " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << "jmp " << token->second << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
@@ -152,7 +159,7 @@ Transpiler &Transpiler::translate()
         // JMPN
         case 6:
             outfile << "cmp dword [acc], 0" << std::endl;
-            outfile << "jl " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << "jl " << token->second << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
@@ -160,7 +167,7 @@ Transpiler &Transpiler::translate()
         // JMPP
         case 7:
             outfile << "cmp dword [acc], 0" << std::endl;
-            outfile << "jg " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << "jg " << token->second << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
@@ -168,22 +175,24 @@ Transpiler &Transpiler::translate()
         // JMPZ
         case 8:
             outfile << "cmp dword [acc], 0" << std::endl;
-            outfile << "je " << labelTable.find(addr + 1)->second << std::endl;
+            outfile << "je " << token->second << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
 
         // COPY
         case 9:
-            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
-            outfile << "mov [" << labelTable.find(addr + 2)->second << "], eax" << std::endl;
+            outfile << "mov eax, [" << token->second << "]" << std::endl;
+            token = labelTable.find(stoi(m_code[addr + 2]));
+            outfile << "mov [" << token->second << "], eax" << std::endl;
             outfile << std::endl;
             addr += 3;
             break;
 
         // LOAD
         case 10:
-            outfile << "mov eax, [" << labelTable.find(addr + 1)->second << "]" << std::endl;
+            outfile << ";LOAD" << std::endl;
+            outfile << "mov eax, [" << token->second << "]" << std::endl;
             outfile << "mov [acc], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -192,14 +201,14 @@ Transpiler &Transpiler::translate()
         // STORE
         case 11:
             outfile << "mov eax, [acc]" << std::endl;
-            outfile << "mov [" << labelTable.find(addr + 1)->second << "], eax" << std::endl;
+            outfile << "mov [" << token->second << "], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
 
         // INPUT
         case 12: // TODO: pass arguments
-            outfile << "" ;
+            outfile << "";
             outfile << "call input_function" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -223,8 +232,8 @@ Transpiler &Transpiler::translate()
 
         // S_INPUT
         case 15:
-            outfile << "push dword [" << labelTable.find(addr + 1)->second << "]" << std::endl;
-            outfile << "push dword " << labelTable.find(addr + 2)->second << std::endl;
+            outfile << "push dword [" << token->second << "]" << std::endl;
+            outfile << "push dword " << token->second << std::endl;
             outfile << "call s_input_function" << std::endl;
             outfile << "add esp, 8" << std::endl;
             outfile << std::endl;
@@ -233,8 +242,8 @@ Transpiler &Transpiler::translate()
 
         // S_OUTPUT
         case 16:
-            outfile << "push dword [" << labelTable.find(addr + 1)->second << "]" << std::endl;
-            outfile << "push dword " << labelTable.find(addr + 2)->second << std::endl;
+            outfile << "push dword [" << token->second << "]" << std::endl;
+            outfile << "push dword " << token->second << std::endl;
             outfile << "call s_output_function" << std::endl;
             outfile << "add esp, 8" << std::endl;
             outfile << std::endl;
@@ -250,13 +259,13 @@ Transpiler &Transpiler::translate()
 
     outfile << "input_function:" << std::endl;
     outfile << "enter 0,0" << std::endl;
-    outfile << "mov eax, 3" <<std::endl;
-    outfile << "mov ebx, 0" <<std::endl;
-    outfile << "mov ecx," <<std::endl;
-    outfile << "mov edx," <<std::endl;
-    outfile << "int 80h" <<std::endl;
-    outfile << "leave" <<std::endl;
-    outfile << "ret" <<std::endl;
+    outfile << "mov eax, 3" << std::endl;
+    outfile << "mov ebx, 0" << std::endl;
+    outfile << "mov ecx," << std::endl; // TODO: finish function
+    outfile << "mov edx," << std::endl;
+    outfile << "int 80h" << std::endl;
+    outfile << "leave" << std::endl;
+    outfile << "ret" << std::endl;
     outfile << std::endl;
 
     outfile << "s_input_function:" << std::endl;
@@ -266,8 +275,8 @@ Transpiler &Transpiler::translate()
     outfile << "mov ecx, [ebp+12]" << std::endl;
     outfile << "mov edx, [ebp+8]" << std::endl;
     outfile << "int 80h" << std::endl;
-    outfile << "leave" <<std::endl;
-    outfile << "ret" <<std::endl;
+    outfile << "leave" << std::endl;
+    outfile << "ret" << std::endl;
     outfile << std::endl;
 
     outfile << "s_output_function:" << std::endl;
@@ -277,17 +286,16 @@ Transpiler &Transpiler::translate()
     outfile << "mov ecx, [ebp+12]" << std::endl;
     outfile << "mov edx, [ebp+8]" << std::endl;
     outfile << "int 80h" << std::endl;
-    outfile << "leave" <<std::endl;
-    outfile << "ret" <<std::endl;
+    outfile << "leave" << std::endl;
+    outfile << "ret" << std::endl;
     outfile << std::endl;
 
-    
-
-
-
-
-
-
+    outfile << "overflow_call:" << std::endl;
+    outfile << "mov eax, 4" << std::endl;
+    outfile << "mov ebx, 1" << std::endl;
+    outfile << "mov ecx, overflow_text" << std::endl;
+    outfile << "mov edx, [ov_size]" << std::endl;
+    outfile << "int 80h" << std::endl;
 
     return *this;
 }
