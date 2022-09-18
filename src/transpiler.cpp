@@ -104,7 +104,13 @@ Transpiler &Transpiler::translate()
     int addr = 0;
     while (addr >= 0)
     {
-        // TODO: append jump label if addr is found on jmptable
+        // append jump label if addr is found on jmptable
+        auto jmptoken = jmpTable.find(stoi(m_code[addr]));
+        if (jmptoken != jmpTable.end())
+        {
+            outfile << jmptoken->second << ": ";
+        }
+
         std::map<int, std::string>::iterator token;
         if (m_code[addr] != "14")
         {
@@ -130,10 +136,10 @@ Transpiler &Transpiler::translate()
             break;
 
         // MUL
-        case 3: // TODO:treatment of overflow
+        case 3:
             outfile << "mov eax, [acc]" << std::endl;
-            outfile << "imul dword [" << token->second << "]" << std::endl; // multiply eax with memory location
-            outfile << "jo overflow_call" << std::endl;
+            outfile << "IMUL dword [" << token->second << "]" << std::endl; // multiply eax with memory location
+            outfile << "JO overflow_call" << std::endl;
             outfile << "mov [acc], eax" << std::endl;
             outfile << std::endl;
             addr += 2;
@@ -296,6 +302,7 @@ Transpiler &Transpiler::translate()
     outfile << "mov ecx, overflow_text" << std::endl;
     outfile << "mov edx, [ov_size]" << std::endl;
     outfile << "int 80h" << std::endl;
+    outfile << std::endl;
 
     return *this;
 }
