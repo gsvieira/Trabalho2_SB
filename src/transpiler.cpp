@@ -89,13 +89,16 @@ Transpiler &Transpiler::translate()
 
     outfile << "section .data" << std::endl;
     outfile << "acc dd 0" << std::endl;
+    outfile << "ten dd 10" << std::endl;
     for (auto &&tableline : labelTable)
     {
         outfile << tableline.second << " dd " << m_code[tableline.first] << std::endl;
     }
     outfile << std::endl;
     outfile << "overflow_text db 'Overflow',0dH,0ah" << std::endl;
-    outfile << "ov_size dd 10" << std::endl;
+    outfile << "ov_size equ $ - msg" << std::endl;
+    outfile << "section .bss" << std::endl;
+    outfile << "aux resd 11" << std::endl; // -2,147,483,648 a 2,147,483,647
     outfile << "section .text" << std::endl;
     outfile << std::endl;
     outfile << "global _start" << std::endl;
@@ -214,8 +217,9 @@ Transpiler &Transpiler::translate()
 
         // INPUT
         case 12: // TODO: pass arguments
-            outfile << "";
+            outfile << "push dword 0";
             outfile << "call input_function" << std::endl;
+            outfile << "pop dword [" << token->second << "]" << std::endl;
             outfile << std::endl;
             addr += 2;
             break;
@@ -267,9 +271,42 @@ Transpiler &Transpiler::translate()
     outfile << "enter 0,0" << std::endl;
     outfile << "mov eax, 3" << std::endl;
     outfile << "mov ebx, 0" << std::endl;
-    outfile << "mov ecx," << std::endl; // TODO: finish function
-    outfile << "mov edx," << std::endl;
+    outfile << "mov ecx, aux" << std::endl;
+    outfile << "mov edx, 12" << std::endl;
     outfile << "int 80h" << std::endl;
+    outfile << "push eax" << std::endl;
+    outfile  << std::endl;
+    outfile << "mov eax, 0" << std::endl;
+    outfile << "mov esi, 0" << std::endl;
+    outfile << "mov ecx, 0" << std::endl;
+    outfile  << std::endl;
+    outfile << "input_loop:" << std::endl;
+    outfile << "mov ebx, 0" << std::endl;
+    outfile << "mov bl, [aux+esi]" << std::endl;
+    outfile << "inc esi" << std::endl;
+    outfile << "cmp bl, '-' ; if neg" << std::endl;
+    outfile << "je input_neg" << std::endl;
+    outfile << "cmp bl, '0'" << std::endl;
+    outfile << "jb input_end" << std::endl;
+    outfile << "cmp bl, '9'" << std::endl;
+    outfile << "jg input_end" << std::endl;
+    outfile << "sub bl, '0'" << std::endl;
+    outfile << "mul dword [ten]" << std::endl;
+    outfile << "add eax, ebx" << std::endl;
+    outfile << "jmp input_loop" << std::endl;
+    outfile << "input_neg:" << std::endl;
+    outfile << "mov ecx,1" << std::endl;
+    outfile << "jmp input_loop" << std::endl;
+    outfile << std::endl;
+    outfile << std::endl;
+    outfile << "input_end:" << std::endl;
+    outfile << "cmp ecx, 1" << std::endl;
+    outfile << "jne input_cleanup" << std::endl;
+    outfile << "neg eax" << std::endl;
+    outfile << std::endl;
+    outfile << "input_cleanup:" << std::endl;
+    outfile << "mov [ebp+8], eax" << std::endl;
+    outfile << "pop eax" << std::endl;
     outfile << "leave" << std::endl;
     outfile << "ret" << std::endl;
     outfile << std::endl;
